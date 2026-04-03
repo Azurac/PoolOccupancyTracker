@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <title>Obsazenost bazénu</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Obsazenost bazénu</h1>
+    <canvas id="chart"></canvas>
+
+    <script>
+        async function loadData() {
+            const res = await fetch('/data?limit=200');
+            const data = await res.json();
+
+            const labels = data.map(d => d.timestamp);
+            const values = data.map(d => d.value);
+
+            new Chart(document.getElementById('chart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Obsazenost',
+                        data: values,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,  // Y osa začíná od 0
+                            //max: 100,           // Maximálně 100% (pokud je obsazenost v %)
+                            title: {
+                                display: true,
+                                text: 'Obsazenost (%)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Čas'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
