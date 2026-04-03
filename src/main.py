@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, UTC
 
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse
@@ -10,23 +11,34 @@ from src.storage import append_record, read_records
 
 templates = Jinja2Templates(directory="templates")
 
-INTERVAL = 15 * 60  # 15 minutes
+INTERVAL_MINUTES = 10
 
+def seconds_until_next_interval(interval_minutes: int) -> float:
+    now = datetime.now(UTC)
+
+    remainder = now.minute % interval_minutes
+    minutes_to_add = interval_minutes - remainder
+
+    next_run = now.replace(second=0, microsecond=0) + timedelta(minutes=minutes_to_add)
+
+    delta = next_run - now
+    return delta.total_seconds()
 
 async def collector_loop():
-    while True:
-        try:
-            value = fetch_occupancy()
+        while True:
+            try:
+                sleep_seconds = seconds_until_next_interval(INTERVAL_MINUTES)
+                await asyncio.sleep(sleep_seconds)
 
-            if value is not None:
-                append_record(value)
-                print(f"[COLLECTED] {value}")
-            else:
-                print("[COLLECTED] no data")
-        except Exception as e:
-            print(f"[ERROR] Collector failed: {e}")
+                value = fetch_occupancy()
 
-        await asyncio.sleep(INTERVAL)
+                if value is not None:
+                    append_record(value)
+                    print(f"[COLLECTED] {value}")
+                else:
+                    print("[COLLECTED] no data")
+            except Exception as e:
+                print(f"[ERROR] Collector failed: {e}")
 
 
 @asynccontextmanager
