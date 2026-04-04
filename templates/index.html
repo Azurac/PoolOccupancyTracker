@@ -5,79 +5,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>Obsazenost bazénu</h1>
-    <canvas id="chart"></canvas>
+<h1>Obsazenost bazénu</h1>
+<canvas id="chart"></canvas>
 
-    <script>
-        const UPDATE_INTERVAL = 10 * 60 * 1000;  // 10 minut v ms
+<div style="font-size: 0.9em; color: #666; margin-top: 10px;">
+    Poslední aktualizace: <span id="timestamp">--:--:--</span>
+</div>
 
-        async function loadData() {
-            try {
-                const res = await fetch('/data?limit=200');
-                const data = await res.json();
-
-                const labels = data.map(d => d.timestamp);
-                const values = data.map(d => d.value);
-
-                // Najdi existující chart nebo vytvoř nový
-                const ctx = document.getElementById('chart');
-                const existingChart = Chart.getChart(ctx);
-
-                if (existingChart) {
-                    // Aktualizuj data existujícího chartu
-                    existingChart.data.labels = labels;
-                    existingChart.data.datasets[0].data = values;
-                    existingChart.update('none');  // Rychlá aktualizace bez animace
-                } else {
-                    // Vytvoř nový chart
-                    new Chart(ctx, {
-                        type: 'bar',  // bar, horizontalBar, pie, line, doughnut, radar, polarArea
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Obsazenost',
-                                data: values,
-                                borderColor: 'rgb(75, 192, 192)',
-                                backgroundColor: 'rgba(75, 192, 192, 0.3)',
-                                fill: true,
-                                tension: 0.4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: { display: true, text: 'Obsazenost (%)' }
-                                },
-                                x: {
-                                    title: { display: true, text: 'Čas' }
-                                }
-                            },
-                            animation: false  // Vypni animaci pro rychlejší update
-                        }
-                    });
-                }
-
-                updateStatus();
-
-            } catch (error) {
-                console.error('Chyba při načítání dat:', error);
-            }
-        }
-
-        loadData();
-
-        setInterval(loadData, UPDATE_INTERVAL);
-
-        function updateStatus() {
-            const now = new Date().toLocaleTimeString('cs-CZ');
-            document.getElementById('timestamp').textContent = now;
-        }
-    </script>
-
-    <div style="font-size: 0.9em; color: #666; margin-top: 10px;">
-        Poslední aktualizace: <span id="timestamp">--:--:--</span>
-    </div>
+<script src="/static/chart.js"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, UTC
 
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from src.scrapers.kravi_hora_scraper import fetch_occupancy
@@ -59,6 +60,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/data")
 def get_data(start: str | None = Query(None), end: str | None = Query(None), limit: int | None = Query(None)):
