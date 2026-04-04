@@ -3,15 +3,50 @@
 <head>
     <title>Obsazenost bazénu</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 16px;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+
+        #chart-container {
+            flex: 1;          /* zabere zbývající prostor */
+            min-height: 0;    /* důležité — bez toho flex neuřízne přetékání */
+            position: relative;
+        }
+
+        #status {
+            flex-shrink: 0;
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 8px;
+        }
+    </style>
 </head>
 <body>
-<h1>Obsazenost bazénu</h1>
-<canvas id="chart"></canvas>
+    <h1>Obsazenost bazénu</h1>
 
-<div style="font-size: 0.9em; color: #666; margin-top: 10px;">
-    Poslední aktualizace: <span id="timestamp">--:--:--</span>
-</div>
+    <div id="chart-container">
+        <canvas id="chart"></canvas>
+    </div>
 
-<script src="/static/chart.js"></script>
+    <div id="status">
+        Poslední aktualizace: <span id="timestamp">--:--:--</span>
+    </div>
+
+    <script src="/static/chart.js"></script>
 </body>
 </html>

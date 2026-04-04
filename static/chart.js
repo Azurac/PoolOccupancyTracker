@@ -1,4 +1,4 @@
-const UPDATE_INTERVAL = 10 * 60 * 1000;  // 10 minut v ms
+const UPDATE_INTERVAL = 10 * 60 * 1000;
 
 async function loadData() {
     try {
@@ -6,7 +6,8 @@ async function loadData() {
         const data = await res.json();
 
         const labels = data.map(d => {
-            return d.timestamp.toLocaleTimeString();
+            return new Date(d.timestamp * 1000)
+                .toLocaleTimeString('cs-CZ', { hour: "2-digit", minute: "2-digit" });
         });
         const values = data.map(d => d.value);
 
@@ -16,7 +17,7 @@ async function loadData() {
         if (existingChart) {
             existingChart.data.labels = labels;
             existingChart.data.datasets[0].data = values;
-            existingChart.update('none');  // Rychlá aktualizace bez animace
+            existingChart.update('none');  // Fast update without animation
         } else {
             new Chart(ctx, {
                 type: 'bar',  // bar, horizontalBar, pie, line, doughnut, radar, polarArea
@@ -39,6 +40,7 @@ async function loadData() {
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -48,7 +50,7 @@ async function loadData() {
                             title: { display: true, text: 'Čas' }
                         }
                     },
-                    animation: false  // Vypni animaci pro rychlejší update
+                    animation: false  // Disable animation for faster update
                 }
             });
         }
