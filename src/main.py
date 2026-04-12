@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, UTC, time
 
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse
@@ -25,10 +25,18 @@ def seconds_until_next_interval(interval_minutes: int) -> float:
     delta = next_run - now
     return delta.total_seconds()
 
+def check_visit_hours(start: int, end: int) -> bool:
+    now = datetime.now()
+    return time(hour=start, minute=0, second=0) < now.time() < time(hour=end, minute=0, second=0)
+
 async def collector_loop():
         while True:
             try:
-                sleep_seconds = seconds_until_next_interval(INTERVAL_MINUTES)
+                if check_visit_hours(6, 22):
+                    sleep_seconds = seconds_until_next_interval(INTERVAL_MINUTES)
+                else:
+                    now = datetime.now(UTC)
+                    sleep_seconds = ((now.replace(hour=6, minute=0,second=0, microsecond=0) + timedelta(days=1)) - now).total_seconds()
                 await asyncio.sleep(sleep_seconds)
 
                 value = fetch_occupancy()
