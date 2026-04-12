@@ -2,12 +2,12 @@ const UPDATE_INTERVAL = 10 * 60 * 1000;
 
 async function loadData() {
     try {
-        const res = await fetch('/data?limit=200');
+        const res = await fetch('/data?limit=100');
         const data = await res.json();
 
         const labels = data.map(d => {
             return new Date(d.timestamp * 1000)
-                .toLocaleTimeString('cs-CZ', { hour: "2-digit", minute: "2-digit" });
+                .toLocaleTimeString('cs-CZ', { weekday: "short", hour: "2-digit", minute: "2-digit" });
         });
         const values = data.map(d => d.value);
 
