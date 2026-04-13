@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 URL = "https://www.kravihora-brno.cz/kryta-plavecka-hala"
 
 
-def fetch_occupancy() -> int | None:
+def fetch_occupancy():
     try:
         response = requests.get(URL, timeout=10)
         response.raise_for_status()

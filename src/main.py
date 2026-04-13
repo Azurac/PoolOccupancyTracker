@@ -71,7 +71,7 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/data")
-def get_data(start: str | None = Query(None), end: str | None = Query(None), limit: int | None = Query(None)):
+def get_data(start: str = Query(None), end: str = Query(None), limit: int = Query(None)):
     data = read_records(start, end)
 
     if limit:
