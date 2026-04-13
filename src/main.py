@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, UTC, time
+from datetime import datetime, timedelta, time
 
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse
@@ -15,7 +15,7 @@ templates = Jinja2Templates(directory="templates")
 INTERVAL_MINUTES = 10
 
 def seconds_until_next_interval(interval_minutes: int) -> float:
-    now = datetime.now(UTC)
+    now = datetime.now()
 
     remainder = now.minute % interval_minutes
     minutes_to_add = interval_minutes - remainder
@@ -35,7 +35,7 @@ async def collector_loop():
                 if check_visit_hours(6, 22):
                     sleep_seconds = seconds_until_next_interval(INTERVAL_MINUTES)
                 else:
-                    now = datetime.now(UTC)
+                    now = datetime.now()
                     sleep_seconds = ((now.replace(hour=6, minute=0,second=0, microsecond=0) + timedelta(days=1)) - now).total_seconds()
                 await asyncio.sleep(sleep_seconds)
 
