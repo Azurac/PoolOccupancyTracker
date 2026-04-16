@@ -132,9 +132,14 @@ async function loadData() {
 
         setNoData(false);
 
+        const options = {
+            hour: '2-digit',
+            minute: '2-digit',
+            ...(dayOffset === 0 && { weekday: 'short' })
+        };
         const labels = data.map(d =>
             new Date(d.timestamp * 1000)
-                .toLocaleTimeString('cs-CZ', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+                .toLocaleTimeString('cs-CZ', options)
         );
         const values = data.map(d => d.value);
 
