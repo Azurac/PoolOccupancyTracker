@@ -12,6 +12,7 @@ function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
     document.getElementById('btn-theme').textContent = theme === 'dark' ? '☀️' : '🌙';
+    renderLegend();
     updateChartTheme();
 }
 
@@ -21,20 +22,23 @@ function updateChartTheme() {
 
     const theme = getTheme();
     const axisColor = theme === 'dark' ? '#ccc' : '#333';
+    const gridColor = theme === 'dark' ? '#333' : '#ddd';
 
     chart.data.datasets[0].backgroundColor = barColorFn();
     chart.options.scales.x.ticks = { color: axisColor };
     chart.options.scales.y.ticks = { color: axisColor };
     chart.options.scales.x.title.color = axisColor;
     chart.options.scales.y.title.color = axisColor;
-    chart.options.scales.x.grid = { color: theme === 'dark' ? '#333' : '#ddd' };
-    chart.options.scales.y.grid = { color: theme === 'dark' ? '#333' : '#ddd' };
+    chart.options.scales.x.grid = { color: gridColor };
+    chart.options.scales.y.grid = { color: gridColor };
     chart.update('none');
 }
 
 function barColorFn() {
-    // Returns a function that reads CSS variables at render time
     return (context) => {
+        // Guard: no data point during empty update
+        if (!context.parsed || context.parsed.y == null) return 'transparent';
+
         const value = context.parsed.y;
         const style = getComputedStyle(document.documentElement);
         if (value < 30) return style.getPropertyValue('--bar-low').trim();
@@ -48,9 +52,25 @@ document.getElementById('btn-theme').addEventListener('click', () => {
     applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
 });
 
-// Apply saved preference on load (before chart renders)
-const savedTheme = localStorage.getItem('theme') || 'dark';
-applyTheme(savedTheme);
+// --- Legend ---
+
+function renderLegend() {
+    const thresholds = [
+        { label: '< 30',   varName: '--bar-low' },
+        { label: '30 – 49', varName: '--bar-medium' },
+        { label: '50 – 79', varName: '--bar-high' },
+        { label: '≥ 80',   varName: '--bar-full' },
+    ];
+
+    const style = getComputedStyle(document.documentElement);
+    document.getElementById('chart-legend').innerHTML = thresholds.map(t => {
+        const color = style.getPropertyValue(t.varName).trim();
+        return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--text);">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${color};flex-shrink:0;"></span>
+            ${t.label}
+        </span>`;
+    }).join('');
+}
 
 // --- Day navigation ---
 
@@ -77,6 +97,11 @@ function updateDateLabel() {
 
 // --- Chart ---
 
+function setNoData(visible) {
+    document.getElementById('no-data-msg').style.display = visible ? 'flex' : 'none';
+    document.getElementById('chart').style.visibility = visible ? 'hidden' : 'visible';
+}
+
 async function loadData() {
     try {
         const date = getDateForOffset(dayOffset);
@@ -90,14 +115,29 @@ async function loadData() {
         const res = await fetch(url);
         const data = await res.json();
 
+        const ctx = document.getElementById('chart');
+        const existingChart = Chart.getChart(ctx);
+
+        if (data.length === 0) {
+            setNoData(true);
+            // Clear chart data without triggering barColorFn on empty rows
+            if (existingChart) {
+                existingChart.data.labels = [];
+                existingChart.data.datasets[0].data = [];
+                existingChart.update('none');
+            }
+            updateStatus();
+            return;
+        }
+
+        setNoData(false);
+
         const labels = data.map(d =>
             new Date(d.timestamp * 1000)
                 .toLocaleTimeString('cs-CZ', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
         );
         const values = data.map(d => d.value);
 
-        const ctx = document.getElementById('chart');
-        const existingChart = Chart.getChart(ctx);
         const theme = getTheme();
         const axisColor = theme === 'dark' ? '#ccc' : '#333';
         const gridColor = theme === 'dark' ? '#333' : '#ddd';
@@ -112,7 +152,6 @@ async function loadData() {
                 data: {
                     labels,
                     datasets: [{
-                        label: 'Obsazenost',
                         data: values,
                         borderColor: 'rgb(75, 192, 192)',
                         backgroundColor: barColorFn(),
@@ -121,6 +160,9 @@ async function loadData() {
                     }]
                 },
                 options: {
+                    plugins: {
+                        legend: { display: false }
+                    },
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
@@ -152,6 +194,8 @@ function updateStatus() {
         new Date().toLocaleTimeString('cs-CZ');
 }
 
+// --- Navigation ---
+
 document.getElementById('btn-prev').addEventListener('click', () => {
     dayOffset--;
     updateDateLabel();
@@ -165,6 +209,10 @@ document.getElementById('btn-next').addEventListener('click', () => {
     loadData();
 });
 
+// --- Init ---
+
+const savedTheme = localStorage.getItem('theme') || 'dark';
+applyTheme(savedTheme);
 updateDateLabel();
 loadData();
 
