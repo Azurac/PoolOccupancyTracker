@@ -1,73 +1,81 @@
-const UPDATE_INTERVAL = 10 * 60 * 1000;
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <title>Obsazenost bazénu</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-async function loadData() {
-    try {
-        const res = await fetch('/data?limit=100');
-        const data = await res.json();
-
-        const labels = data.map(d => {
-            return new Date(d.timestamp * 1000)
-                .toLocaleTimeString('cs-CZ', { weekday: "short", hour: "2-digit", minute: "2-digit" });
-        });
-        const values = data.map(d => d.value);
-
-        const ctx = document.getElementById('chart');
-        const existingChart = Chart.getChart(ctx);
-        const theme = "dark";
-
-        if (existingChart) {
-            existingChart.data.labels = labels;
-            existingChart.data.datasets[0].data = values;
-            existingChart.update('none');  // Fast update without animation
-        } else {
-            new Chart(ctx, {
-                type: 'bar',  // bar, horizontalBar, pie, line, doughnut, radar, polarArea
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Obsazenost',
-                        data: values,
-                        borderColor: 'rgb(75, 192, 192)',
-                        backgroundColor: (context) => {
-                            const value = context.parsed.y;
-                            if (value < 30) return theme === "dark" ? 'rgba(75, 192, 192, 0.8)' : 'rgba(75, 192, 192, 0.3)';
-                            if (value < 50) return theme === "dark" ? '#4CAF50CC' : '#4CAF5066';
-                            if (value < 80) return theme === "dark" ? '#FF9800CC' : '#FF980066';
-                            return theme === "dark" ? '#F44336CC' : '#F4433666';
-                        },
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Obsazenost' }
-                        },
-                        x: {
-                            title: { display: true, text: 'Čas' }
-                        }
-                    },
-                    animation: false  // Disable animation for faster update
-                }
-            });
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 16px;
+            background: #000000;
+            color: #ffffff;
         }
 
-        updateStatus();
+        h1 { margin-bottom: 8px; flex-shrink: 0; }
 
-    } catch (error) {
-        console.error('Chyba při načítání dat:', error);
-    }
-}
+        #day-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
 
-loadData();
+        #day-nav button {
+            background: transparent;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 5px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
 
-setInterval(loadData, UPDATE_INTERVAL);
+        #day-nav button:hover:not(:disabled) { background: #222; }
+        #day-nav button:disabled { opacity: 0.35; cursor: not-allowed; }
 
-function updateStatus() {
-    const now = new Date().toLocaleTimeString('cs-CZ');
-    document.getElementById('timestamp').textContent = now;
-}
+        #date-label {
+            flex: 1;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        #chart-container {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+        }
+
+        #status {
+            flex-shrink: 0;
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Obsazenost bazénu</h1>
+
+    <div id="day-nav">
+        <button id="btn-prev">← Předchozí</button>
+        <span id="date-label"></span>
+        <button id="btn-next">Další →</button>
+    </div>
+
+    <div id="chart-container">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <div id="status">
+        Poslední aktualizace: <span id="timestamp">--:--:--</span>
+    </div>
+
+    <script src="/static/chart.js"></script>
+</body>
+</html>
