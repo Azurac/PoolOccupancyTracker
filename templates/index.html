@@ -1,9 +1,35 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="cs" data-theme="dark">
 <head>
     <title>Obsazenost bazénu</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root[data-theme="dark"] {
+            --bg: #000000;
+            --bg-btn: transparent;
+            --bg-btn-hover: #222;
+            --border: #444;
+            --text: #ffffff;
+            --text-muted: #888;
+            --bar-low:    rgba(75, 192, 192, 0.8);
+            --bar-medium: #4CAF50CC;
+            --bar-high:   #FF9800CC;
+            --bar-full:   #F44336CC;
+        }
+
+        :root[data-theme="light"] {
+            --bg: #f5f5f5;
+            --bg-btn: transparent;
+            --bg-btn-hover: #ddd;
+            --border: #bbb;
+            --text: #111111;
+            --text-muted: #666;
+            --bar-low:    rgba(75, 192, 192, 0.5);
+            --bar-medium: #4CAF5066;
+            --bar-high:   #FF980066;
+            --bar-full:   #F4433666;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
@@ -11,11 +37,20 @@
             flex-direction: column;
             height: 100vh;
             padding: 16px;
-            background: #000000;
-            color: #ffffff;
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.2s, color 0.2s;
         }
 
         h1 { margin-bottom: 8px; flex-shrink: 0; }
+
+        #top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
 
         #day-nav {
             display: flex;
@@ -25,18 +60,26 @@
             flex-shrink: 0;
         }
 
-        #day-nav button {
-            background: transparent;
-            border: 1px solid #444;
-            color: #fff;
+        button {
+            background: var(--bg-btn);
+            border: 1px solid var(--border);
+            color: var(--text);
             padding: 5px 14px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
+            transition: background 0.15s;
         }
 
-        #day-nav button:hover:not(:disabled) { background: #222; }
-        #day-nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+        button:hover:not(:disabled) { background: var(--bg-btn-hover); }
+        button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        #btn-theme {
+            padding: 5px 10px;
+            font-size: 16px;
+            line-height: 1;
+            border-radius: 6px;
+        }
 
         #date-label {
             flex: 1;
@@ -54,13 +97,16 @@
         #status {
             flex-shrink: 0;
             font-size: 0.9em;
-            color: #888;
+            color: var(--text-muted);
             margin-top: 8px;
         }
     </style>
 </head>
 <body>
-    <h1>Obsazenost bazénu</h1>
+    <div id="top-bar">
+        <h1>Obsazenost bazénu</h1>
+        <button id="btn-theme" title="Přepnout motiv">🌙</button>
+    </div>
 
     <div id="day-nav">
         <button id="btn-prev">← Předchozí</button>
