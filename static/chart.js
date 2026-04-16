@@ -30,10 +30,10 @@ async function loadData() {
                         borderColor: 'rgb(75, 192, 192)',
                         backgroundColor: (context) => {
                             const value = context.parsed.y;
-                            if (value < 30) return theme == "dark" ? 'rgba(75, 192, 192, 0.8)' : 'rgba(75, 192, 192, 0.3)';
-                            if (value < 50) return theme == "dark" ? '#4CAF50CC' : '#4CAF5066';
-                            if (value < 80) return theme == "dark" ? '#FF9800CC' : '#FF980066';
-                            return theme == "dark" ? '#F44336CC' : '#F4433666';
+                            if (value < 30) return theme === "dark" ? 'rgba(75, 192, 192, 0.8)' : 'rgba(75, 192, 192, 0.3)';
+                            if (value < 50) return theme === "dark" ? '#4CAF50CC' : '#4CAF5066';
+                            if (value < 80) return theme === "dark" ? '#FF9800CC' : '#FF980066';
+                            return theme === "dark" ? '#F44336CC' : '#F4433666';
                         },
                         fill: true,
                         tension: 0.4

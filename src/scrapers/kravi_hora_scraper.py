@@ -1,10 +1,12 @@
+from typing import Union
+
 import requests
 from bs4 import BeautifulSoup
 
 URL = "https://www.kravihora-brno.cz/kryta-plavecka-hala"
 
 
-def fetch_occupancy():
+def fetch_occupancy() -> Union[int, None]:
     try:
         response = requests.get(URL, timeout=10)
         response.raise_for_status()
