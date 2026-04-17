@@ -1,6 +1,6 @@
 const UPDATE_INTERVAL = 10 * 60 * 1000;
 
-let dayOffset = 0;
+let dayOffset = 1;
 
 // --- Theme ---
 
@@ -80,6 +80,10 @@ function getDateForOffset(offset) {
     return d;
 }
 
+function isDailyRolloutSelected() {
+    return dayOffset === 1
+}
+
 function toLocalISODate(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -89,10 +93,10 @@ function toLocalISODate(date) {
 
 function updateDateLabel() {
     const d = getDateForOffset(dayOffset);
-    document.getElementById('date-label').textContent = d.toLocaleDateString('cs-CZ', {
+    document.getElementById('date-label').textContent = isDailyRolloutSelected() ? "Daily Rollout" : d.toLocaleDateString('cs-CZ', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
-    document.getElementById('btn-next').disabled = dayOffset === 0;
+    document.getElementById('btn-next').disabled = isDailyRolloutSelected();
 }
 
 // --- Chart ---
@@ -108,7 +112,7 @@ async function loadData() {
         const start = toLocalISODate(date) + 'T00:00:00';
         const end   = toLocalISODate(date) + 'T23:59:59';
 
-        const url = dayOffset === 0
+        const url = isDailyRolloutSelected()
             ? '/data?limit=100'
             : `/data?start=${start}&end=${end}`;
 
@@ -135,7 +139,7 @@ async function loadData() {
         const options = {
             hour: '2-digit',
             minute: '2-digit',
-            ...(dayOffset === 0 && { weekday: 'short' })
+            ...(isDailyRolloutSelected() && { weekday: 'short' })
         };
         const labels = data.map(d =>
             new Date(d.timestamp * 1000)
@@ -208,7 +212,7 @@ document.getElementById('btn-prev').addEventListener('click', () => {
 });
 
 document.getElementById('btn-next').addEventListener('click', () => {
-    if (dayOffset >= 0) return;
+    if (dayOffset >= 1) return;
     dayOffset++;
     updateDateLabel();
     loadData();
@@ -222,5 +226,5 @@ updateDateLabel();
 loadData();
 
 setInterval(() => {
-    if (dayOffset === 0) loadData();
+    if (dayOffset >= 0) loadData();
 }, UPDATE_INTERVAL);
