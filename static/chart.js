@@ -113,7 +113,7 @@ async function loadData() {
         const end   = toLocalISODate(date) + 'T23:59:59';
 
         const url = isDailyRolloutSelected()
-            ? '/data?limit=100'
+            ? '/rollout'
             : `/data?start=${start}&end=${end}`;
 
         const res = await fetch(url);

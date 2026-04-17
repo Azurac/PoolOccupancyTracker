@@ -79,6 +79,13 @@ def get_data(start: str = Query(None), end: str = Query(None), limit: int = Quer
 
     return data
 
+@app.get("/rollout")
+def get_rollout():
+    data = read_records()
+    open_hours = 16
+    limit = open_hours * int(60 / INTERVAL_MINUTES) + 1
+    return data[-limit:]
+
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
