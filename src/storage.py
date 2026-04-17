@@ -28,8 +28,8 @@ def read_records(start=None, end=None):
                 continue
 
             results.append({
-                "timestamp": ts,
-                "value": int(value)
+                "time": int(ts),
+                "val": int(value)
             })
 
     return results

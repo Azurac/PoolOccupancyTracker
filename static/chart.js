@@ -142,10 +142,10 @@ async function loadData() {
             ...(isDailyRolloutSelected() && { weekday: 'short' })
         };
         const labels = data.map(d =>
-            new Date(d.timestamp * 1000)
+            new Date(d.time * 1000)
                 .toLocaleTimeString('cs-CZ', options)
         );
-        const values = data.map(d => d.value);
+        const values = data.map(d => d.val);
 
         const theme = getTheme();
         const axisColor = theme === 'dark' ? '#ccc' : '#333';
