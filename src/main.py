@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from src import __version__ as version
 from src.scrapers.kravi_hora_scraper import fetch_occupancy
-from src.storage import append_record, read_records
+from src.storage import append_record, read_records, init_db, migrate_from_csv
 
 templates = Jinja2Templates(directory="templates")
 
@@ -54,7 +54,9 @@ async def collector_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    init_db()
+    migrate_from_csv()
+
     task = asyncio.create_task(collector_loop())
     print("[LIFESPAN] Collector started")
 
