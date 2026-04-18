@@ -7,12 +7,14 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from src import __version__ as version
 from src.scrapers.kravi_hora_scraper import fetch_occupancy
 from src.storage import append_record, read_records
 
 templates = Jinja2Templates(directory="templates")
 
 INTERVAL_MINUTES = 10
+
 
 def seconds_until_next_interval(interval_minutes: int) -> float:
     now = datetime.now()
@@ -69,6 +71,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/version")
+def get_version():
+    return {"version": version}
+
 
 @app.get("/data")
 def get_data(start: str = Query(None), end: str = Query(None), limit: int = Query(None)):

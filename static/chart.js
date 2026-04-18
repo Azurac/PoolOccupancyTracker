@@ -225,12 +225,25 @@ document.getElementById('btn-next').addEventListener('click', () => {
     loadData();
 });
 
+// --- Version ---
+
+async function loadVersion() {
+    try {
+        const res  = await fetch('/version');
+        const data = await res.json();
+        document.getElementById('version').textContent = `v${data.version}`;
+    } catch(error) {
+        console.error('Chyba při načítání verze:', error);
+    }
+}
+
 // --- Init ---
 
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || THEMES.DARK;
 applyTheme(savedTheme);
 updateDateLabel();
 loadData();
+loadVersion();
 
 setInterval(() => {
     if (dayOffset >= 0) loadData();
