@@ -6,6 +6,7 @@ from pathlib import Path
 DB_FILE  = Path("data.db")
 CSV_FILE = Path("data.csv")
 
+DEFAULT_LIMIT = 200
 TABLE_NAME = "kravi_hora"
 
 
@@ -66,9 +67,20 @@ def append_record(value: int):
         )
 
 
-def read_records(start: str = None, end: str = None) -> list[dict]:
-    query  = f"SELECT time, val FROM {TABLE_NAME}"
-    params = []
+def read_latest(n: int) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            f"SELECT time, val FROM {TABLE_NAME} ORDER BY time DESC LIMIT ?",
+            (n,),
+        ).fetchall()
+    return [{"time": row["time"], "val": row["val"]} for row in reversed(rows)]
+
+
+def read_records(start: str = None, end: str = None, limit: int = DEFAULT_LIMIT) -> list[dict]:
+    limit = min(limit, DEFAULT_LIMIT)
+
+    query = f"SELECT time, val FROM {TABLE_NAME}"
+    params: list = []
 
     conditions = []
     if start:
@@ -81,7 +93,8 @@ def read_records(start: str = None, end: str = None) -> list[dict]:
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
 
-    query += " ORDER BY time"
+    query += " ORDER BY time LIMIT ?"
+    params.append(limit)
 
     with _connect() as conn:
         rows = conn.execute(query, params).fetchall()

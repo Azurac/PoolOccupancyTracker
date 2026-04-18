@@ -9,11 +9,13 @@ from fastapi.templating import Jinja2Templates
 
 from src import __version__ as version
 from src.scrapers.kravi_hora_scraper import fetch_occupancy
-from src.storage import append_record, read_records, init_db, migrate_from_csv
+from src.storage import append_record, read_records, init_db, migrate_from_csv, read_latest, DEFAULT_LIMIT
 
 templates = Jinja2Templates(directory="templates")
 
 INTERVAL_MINUTES = 10
+ROLLOUT_HOURS    = 16
+ROLLOUT_LIMIT    = ROLLOUT_HOURS * (60 // INTERVAL_MINUTES) + 1
 
 
 def seconds_until_next_interval(interval_minutes: int) -> float:
@@ -84,21 +86,13 @@ def get_version():
 
 
 @app.get("/data")
-def get_data(start: str = Query(None), end: str = Query(None), limit: int = Query(None)):
-    data = read_records(start, end)
-
-    if limit:
-        data = data[-limit:]
-
-    return data
+def get_data(start: str = Query(None), end: str = Query(None), limit: int = Query(DEFAULT_LIMIT)):
+    return read_records(start, end, limit)
 
 
 @app.get("/rollout")
 def get_rollout():
-    data = read_records()
-    open_hours = 16
-    limit = open_hours * int(60 / INTERVAL_MINUTES) + 1
-    return data[-limit:]
+    return read_latest(ROLLOUT_LIMIT)
 
 
 @app.get("/", response_class=HTMLResponse)
