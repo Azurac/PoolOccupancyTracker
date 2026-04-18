@@ -18,38 +18,40 @@ INTERVAL_MINUTES = 10
 
 def seconds_until_next_interval(interval_minutes: int) -> float:
     now = datetime.now()
-
     remainder = now.minute % interval_minutes
     minutes_to_add = interval_minutes - remainder
 
     next_run = now.replace(second=0, microsecond=0) + timedelta(minutes=minutes_to_add)
+    return (next_run - now).total_seconds()
 
-    delta = next_run - now
-    return delta.total_seconds()
 
 def check_visit_hours(start: int, end: int) -> bool:
     now = datetime.now()
-    return time(hour=start, minute=0, second=0) < now.time() < time(hour=end, minute=0, second=0)
+    return time(hour=start) < now.time() < time(hour=end)
+
 
 async def collector_loop():
-        while True:
-            try:
-                if check_visit_hours(6, 22):
-                    sleep_seconds = seconds_until_next_interval(INTERVAL_MINUTES)
-                else:
-                    now = datetime.now()
-                    sleep_seconds = ((now.replace(hour=6, minute=0,second=0, microsecond=0) + timedelta(days=1)) - now).total_seconds()
-                await asyncio.sleep(sleep_seconds)
+    while True:
+        try:
+            if check_visit_hours(6, 22):
+                sleep_seconds = seconds_until_next_interval(INTERVAL_MINUTES)
+            else:
+                now = datetime.now()
+                sleep_seconds = (
+                        (now.replace(hour=6, minute=0, second=0, microsecond=0) + timedelta(days=1)) - now
+                ).total_seconds()
 
-                value = fetch_occupancy()
+            await asyncio.sleep(sleep_seconds)
 
-                if value is not None:
-                    append_record(value)
-                    print(f"[COLLECTED] {value}")
-                else:
-                    print("[COLLECTED] no data")
-            except Exception as e:
-                print(f"[ERROR] Collector failed: {e}")
+            value = fetch_occupancy()
+
+            if value is not None:
+                append_record(value)
+                print(f"[COLLECTED] {value}")
+            else:
+                print("[COLLECTED] no data")
+        except Exception as e:
+            print(f"[ERROR] Collector failed: {e}")
 
 
 @asynccontextmanager
@@ -60,7 +62,8 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(collector_loop())
     print("[LIFESPAN] Collector started")
 
-    yield  # Aplikace běží
+    # Starts application
+    yield
 
     # Shutdown
     task.cancel()
@@ -88,6 +91,7 @@ def get_data(start: str = Query(None), end: str = Query(None), limit: int = Quer
         data = data[-limit:]
 
     return data
+
 
 @app.get("/rollout")
 def get_rollout():
