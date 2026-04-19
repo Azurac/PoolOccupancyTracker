@@ -1,7 +1,6 @@
 import asyncio
 
 from src.collectors.schedule_helper import ScheduleHelper
-from src.config import COLLECTOR_INTERVAL_MINUTES, VISIT_HOURS_START, VISIT_HOURS_END
 from src.scrapers.base_scraper import BaseScraper
 from src.storage.occupancy_repository import OccupancyRepository
 
@@ -23,9 +22,10 @@ class CollectorLoop:
                 print(f"[ERROR] Collector failed: {e}")
 
     def _seconds_until_next_collection(self) -> float:
-        if self._schedule.is_within_hours(VISIT_HOURS_START, VISIT_HOURS_END):
-            return self._schedule.seconds_until_next_interval(COLLECTOR_INTERVAL_MINUTES)
-        return self._schedule.seconds_until_hour(VISIT_HOURS_START)
+        cfg = self._scraper.config
+        if self._schedule.is_within_hours(cfg.visit_hours_start, cfg.visit_hours_end):
+            return self._schedule.seconds_until_next_interval(cfg.interval_minutes)
+        return self._schedule.seconds_until_hour(cfg.visit_hours_start)
 
     def _collect(self):
         value = self._scraper.fetch_occupancy()

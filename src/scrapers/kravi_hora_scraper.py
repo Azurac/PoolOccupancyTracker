@@ -1,8 +1,10 @@
+from functools import cached_property
 from typing import Union
 
 import requests
 from bs4 import BeautifulSoup
 
+from src.pools.pool_config import PoolConfig
 from src.scrapers.base_scraper import BaseScraper
 
 _URL = "https://www.kravihora-brno.cz/kryta-plavecka-hala"
@@ -11,6 +13,16 @@ _REQUEST_TIMEOUT = 10
 
 
 class KraviHoraScraper(BaseScraper):
+    @cached_property
+    def config(self) -> PoolConfig:
+        return PoolConfig(
+            id="kravi_hora",
+            name="Kraví Hora",
+            interval_minutes=10,
+            visit_hours_start=6,
+            visit_hours_end=22,
+        )
+
     def fetch_occupancy(self) -> Union[int, None]:
         try:
             response = requests.get(_URL, timeout=_REQUEST_TIMEOUT)

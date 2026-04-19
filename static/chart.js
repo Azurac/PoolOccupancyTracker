@@ -112,7 +112,7 @@ function toLocalISODate(date) {
 function updateDateLabel() {
     const d = getDateForOffset(dayOffset);
     document.getElementById('date-label').textContent = isDailyRolloutSelected()
-        ? 'Daily Rollout'
+        ? 'Denní Přehled'
         : d.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     document.getElementById('btn-next').disabled = isDailyRolloutSelected();
 }
@@ -141,8 +141,8 @@ async function loadData() {
         const end   = toLocalISODate(date) + 'T23:59:59';
 
         const url = isDailyRolloutSelected()
-            ? '/rollout'
-            : `/data?start=${start}&end=${end}`;
+            ? '/rollout/kravi_hora'
+            : `/data/kravi_hora?start=${start}&end=${end}`;
 
         const res  = await fetch(url);
         const data = await res.json();
