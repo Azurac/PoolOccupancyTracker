@@ -1,6 +1,5 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, time
 
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse
@@ -8,66 +7,36 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from src import __version__ as version
-from src.scrapers.kravi_hora_scraper import fetch_occupancy
-from src.storage import append_record, read_records, init_db, migrate_from_csv, read_latest, DEFAULT_LIMIT
+from src.collectors.collector_loop import CollectorLoop
+from src.collectors.schedule_helper import ScheduleHelper
+from src.config import DB_FILE, CSV_FILE, DEFAULT_QUERY_LIMIT, ROLLOUT_LIMIT
+from src.scrapers.kravi_hora_scraper import KraviHoraScraper
+from src.storage.database import Database
+from src.storage.occupancy_repository import OccupancyRepository
+
+# --- Dependency setup ---
+
+_db = Database(DB_FILE)
+_repository = OccupancyRepository(_db)
+_scraper = KraviHoraScraper()
+_schedule = ScheduleHelper()
+_collector = CollectorLoop(_scraper, _repository, _schedule)
 
 templates = Jinja2Templates(directory="templates")
 
-INTERVAL_MINUTES = 10
-ROLLOUT_HOURS    = 16
-ROLLOUT_LIMIT    = ROLLOUT_HOURS * (60 // INTERVAL_MINUTES) + 1
 
-
-def seconds_until_next_interval(interval_minutes: int) -> float:
-    now = datetime.now()
-    remainder = now.minute % interval_minutes
-    minutes_to_add = interval_minutes - remainder
-
-    next_run = now.replace(second=0, microsecond=0) + timedelta(minutes=minutes_to_add)
-    return (next_run - now).total_seconds()
-
-
-def check_visit_hours(start: int, end: int) -> bool:
-    now = datetime.now()
-    return time(hour=start) < now.time() < time(hour=end)
-
-
-async def collector_loop():
-    while True:
-        try:
-            if check_visit_hours(6, 22):
-                sleep_seconds = seconds_until_next_interval(INTERVAL_MINUTES)
-            else:
-                now = datetime.now()
-                sleep_seconds = (
-                        (now.replace(hour=6, minute=0, second=0, microsecond=0) + timedelta(days=1)) - now
-                ).total_seconds()
-
-            await asyncio.sleep(sleep_seconds)
-
-            value = fetch_occupancy()
-
-            if value is not None:
-                append_record(value)
-                print(f"[COLLECTED] {value}")
-            else:
-                print("[COLLECTED] no data")
-        except Exception as e:
-            print(f"[ERROR] Collector failed: {e}")
-
+# --- Lifespan ---
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
-    migrate_from_csv()
+    _db.init()
+    _db.migrate_from_csv(CSV_FILE)
 
-    task = asyncio.create_task(collector_loop())
+    task = asyncio.create_task(_collector.run())
     print("[LIFESPAN] Collector started")
 
-    # Starts application
     yield
 
-    # Shutdown
     task.cancel()
     try:
         await task
@@ -76,9 +45,13 @@ async def lifespan(app: FastAPI):
     print("[LIFESPAN] Collector finished")
 
 
+# --- App ---
+
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+# --- Routes ---
 
 @app.get("/version")
 def get_version():
@@ -86,13 +59,15 @@ def get_version():
 
 
 @app.get("/data")
-def get_data(start: str = Query(None), end: str = Query(None), limit: int = Query(DEFAULT_LIMIT)):
-    return read_records(start, end, limit)
+def get_data(start: str = Query(None), end: str = Query(None), limit: int = Query(DEFAULT_QUERY_LIMIT)):
+    records = _repository.find_by_range(start, end, limit)
+    return [r.to_dict() for r in records]
 
 
 @app.get("/rollout")
 def get_rollout():
-    return read_latest(ROLLOUT_LIMIT)
+    records = _repository.find_latest(ROLLOUT_LIMIT)
+    return [r.to_dict() for r in records]
 
 
 @app.get("/", response_class=HTMLResponse)
