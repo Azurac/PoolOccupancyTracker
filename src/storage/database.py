@@ -4,12 +4,6 @@ from pathlib import Path
 
 
 class Database:
-    _TABLE_DDL = """
-        CREATE TABLE IF NOT EXISTS occupancy (
-            time  INTEGER PRIMARY KEY,
-            val   INTEGER NOT NULL
-        )
-    """
 
     def __init__(self, db_file: Path):
         self._db_file = db_file
@@ -19,11 +13,16 @@ class Database:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def init(self):
+    def init(self, table_name):
         with self.connect() as conn:
-            conn.execute(self._TABLE_DDL)
+            conn.execute(f"""
+                CREATE TABLE IF NOT EXISTS {table_name} (
+                    time  INTEGER PRIMARY KEY,
+                    val   INTEGER NOT NULL
+                )
+            """)
 
-    def migrate_from_csv(self, csv_file: Path):
+    def migrate_from_csv(self, csv_file: Path, table_name: str):
         if not csv_file.exists():
             return
 
@@ -42,7 +41,7 @@ class Database:
                     ts = int(float(row[0]))
                     val = int(row[1])
                     conn.execute(
-                        "INSERT OR IGNORE INTO occupancy (time, val) VALUES (?, ?)",
+                        f"INSERT OR IGNORE INTO {table_name} (time, val) VALUES (?, ?)",
                         (ts, val),
                     )
                     migrated += 1
@@ -52,6 +51,6 @@ class Database:
 
         csv_file.rename(csv_file.with_suffix(".csv.bak"))
         print(
-            f"[MIGRATION] Done: {migrated} records migrated, {skipped} skipped. "
+            f"[MIGRATION] Done: {migrated} records migrated to {table_name}, {skipped} skipped. "
             f"Original file renamed to {csv_file.with_suffix('.csv.bak')}"
         )

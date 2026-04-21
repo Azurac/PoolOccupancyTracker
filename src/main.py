@@ -28,8 +28,8 @@ templates = Jinja2Templates(directory="templates")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    _db.init()
-    _db.migrate_from_csv(CSV_FILE)
+    _db.init("kravi_hora")
+    _db.migrate_from_csv(CSV_FILE, "kravi_hora")
 
     collectors = create_collectors(_db, _schedule)
     tasks = [asyncio.create_task(c.run()) for c in collectors]
