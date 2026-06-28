@@ -1,6 +1,15 @@
 const UPDATE_INTERVAL = 10 * 60 * 1000;
 
-let dayOffset = 1;
+const URL_PARAM_POOL = 'pool';
+const URL_PARAM_DAY  = 'day';
+
+const ROLLOUT_DATE = null;
+
+// --- State ---
+
+let selectedPoolId   = null;
+let selectedDate     = ROLLOUT_DATE; // Date | null; null = rollout view
+let currentThresholds = [];
 
 // --- Theme ---
 
@@ -16,11 +25,11 @@ const THEME_ICONS = {
 
 const THEME_STORAGE_KEY = 'theme';
 
-const BAR_THRESHOLDS = [
-    { max: 30, varName: '--bar-low',    label: '< 30'    },
-    { max: 50, varName: '--bar-medium', label: '30 – 49' },
-    { max: 80, varName: '--bar-high',   label: '50 – 79' },
-    { max: Infinity, varName: '--bar-full', label: '≥ 80' },
+const BAR_COLORS = [
+    { varName: '--bar-low'    },
+    { varName: '--bar-medium' },
+    { varName: '--bar-high'   },
+    { varName: '--bar-full'   },
 ];
 
 function getCssVar(name) {
@@ -55,12 +64,12 @@ function updateChartTheme() {
     const gridColor = getGridColor();
 
     chart.data.datasets[0].backgroundColor = barColorFn();
-    chart.options.scales.x.ticks.color = axisColor;
-    chart.options.scales.y.ticks.color = axisColor;
-    chart.options.scales.x.title.color = axisColor;
-    chart.options.scales.y.title.color = axisColor;
-    chart.options.scales.x.grid.color  = gridColor;
-    chart.options.scales.y.grid.color  = gridColor;
+    chart.options.scales.x.ticks.color     = axisColor;
+    chart.options.scales.y.ticks.color     = axisColor;
+    chart.options.scales.x.title.color     = axisColor;
+    chart.options.scales.y.title.color     = axisColor;
+    chart.options.scales.x.grid.color      = gridColor;
+    chart.options.scales.y.grid.color      = gridColor;
     chart.update('none');
 }
 
@@ -69,8 +78,9 @@ function barColorFn() {
         if (!context.parsed || context.parsed.y == null) return 'transparent';
 
         const value = context.parsed.y;
-        const threshold = BAR_THRESHOLDS.find(t => value < t.max);
-        return getCssVar(threshold.varName);
+        const index = currentThresholds.findIndex(t => value < t);
+        const colorIndex = index === -1 ? BAR_COLORS.length - 1 : index;
+        return getCssVar(BAR_COLORS[colorIndex].varName);
     };
 }
 
@@ -81,25 +91,60 @@ document.getElementById('btn-theme').addEventListener('click', () => {
 // --- Legend ---
 
 function renderLegend() {
-    document.getElementById('chart-legend').innerHTML = BAR_THRESHOLDS.map(t => {
-        const color = getCssVar(t.varName);
+    if (currentThresholds.length === 0) return;
+
+    const [t1, t2, t3] = currentThresholds;
+    const labels = [`< ${t1}`, `${t1} – ${t2 - 1}`, `${t2} – ${t3 - 1}`, `≥ ${t3}`];
+
+    document.getElementById('chart-legend').innerHTML = BAR_COLORS.map((bar, i) => {
+        const color = getCssVar(bar.varName);
         return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--text);">
             <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${color};flex-shrink:0;"></span>
-            ${t.label}
+            ${labels[i]}
         </span>`;
     }).join('');
 }
 
-// --- Day navigation ---
+// --- Pool selection ---
 
-function getDateForOffset(offset) {
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    return d;
+async function loadPools() {
+    const res   = await fetch('/pools');
+    const pools = await res.json();
+
+    const select = document.getElementById('pool-select');
+    select.innerHTML = pools.map(p =>
+        `<option value="${p.id}">${p.name}</option>`
+    ).join('');
+
+    const urlPool = new URLSearchParams(location.search).get(URL_PARAM_POOL);
+    const initialPool = pools.find(p => p.id === urlPool) ?? pools[0];
+
+    applyPoolSelection(initialPool);
 }
 
-function isDailyRolloutSelected() {
-    return dayOffset === 1;
+function applyPoolSelection(pool) {
+    selectedPoolId    = pool.id;
+    currentThresholds = pool.thresholds;
+
+    document.getElementById('pool-select').value = pool.id;
+    renderLegend();
+}
+
+document.getElementById('pool-select').addEventListener('change', async (e) => {
+    const res   = await fetch('/pools');
+    const pools = await res.json();
+    const pool  = pools.find(p => p.id === e.target.value);
+    if (!pool) return;
+
+    applyPoolSelection(pool);
+    pushUrlState();
+    loadData();
+});
+
+// --- Day navigation ---
+
+function isRolloutActive() {
+    return selectedDate === ROLLOUT_DATE;
 }
 
 function toLocalISODate(date) {
@@ -110,12 +155,77 @@ function toLocalISODate(date) {
 }
 
 function updateDateLabel() {
-    const d = getDateForOffset(dayOffset);
-    document.getElementById('date-label').textContent = isDailyRolloutSelected()
+    const rollout = isRolloutActive();
+    document.getElementById('date-label').textContent = rollout
         ? 'Denní Přehled'
-        : d.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    document.getElementById('btn-next').disabled = isDailyRolloutSelected();
+        : selectedDate.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    document.getElementById('btn-next').disabled = rollout;
+    document.getElementById('btn-rollout').style.display = rollout ? 'none' : '';
 }
+
+function shiftDate(days) {
+    const base = isRolloutActive() ? new Date() : new Date(selectedDate);
+    base.setDate(base.getDate() + days);
+
+    // Clamp to today – navigating forward past today switches to rollout
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    base.setHours(0, 0, 0, 0);
+
+    selectedDate = base >= today ? ROLLOUT_DATE : base;
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+    shiftDate(-1);
+    updateDateLabel();
+    pushUrlState();
+    loadData();
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+    if (isRolloutActive()) return;
+    shiftDate(1);
+    updateDateLabel();
+    pushUrlState();
+    loadData();
+});
+
+document.getElementById('btn-rollout').addEventListener('click', () => {
+    selectedDate = ROLLOUT_DATE;
+    updateDateLabel();
+    pushUrlState();
+    loadData();
+});
+
+// --- URL state ---
+
+function pushUrlState() {
+    const params = new URLSearchParams();
+    if (selectedPoolId) params.set(URL_PARAM_POOL, selectedPoolId);
+    if (!isRolloutActive()) params.set(URL_PARAM_DAY, toLocalISODate(selectedDate));
+
+    const newUrl = `${location.pathname}?${params.toString()}`;
+    history.pushState({ poolId: selectedPoolId, day: isRolloutActive() ? null : toLocalISODate(selectedDate) }, '', newUrl);
+}
+
+function readUrlState() {
+    const params = new URLSearchParams(location.search);
+    const dayParam = params.get(URL_PARAM_DAY);
+
+    if (dayParam) {
+        const parsed = new Date(dayParam);
+        selectedDate = isNaN(parsed.getTime()) ? ROLLOUT_DATE : parsed;
+    } else {
+        selectedDate = ROLLOUT_DATE;
+    }
+}
+
+window.addEventListener('popstate', () => {
+    readUrlState();
+    updateDateLabel();
+    loadData();
+});
 
 // --- Chart ---
 
@@ -130,19 +240,21 @@ function buildScaleAxis(label) {
 }
 
 function setNoData(visible) {
-    document.getElementById('no-data-msg').style.display = visible ? 'flex' : 'none';
-    document.getElementById('chart').style.visibility   = visible ? 'hidden' : 'visible';
+    document.getElementById('no-data-msg').style.visibility = visible ? 'visible' : 'hidden';
+    document.getElementById('chart').style.visibility       = visible ? 'hidden' : 'visible';
 }
 
 async function loadData() {
-    try {
-        const date  = getDateForOffset(dayOffset);
-        const start = toLocalISODate(date) + 'T00:00:00';
-        const end   = toLocalISODate(date) + 'T23:59:59';
+    if (!selectedPoolId) return;
 
-        const url = isDailyRolloutSelected()
-            ? '/rollout/kravi_hora'
-            : `/data/kravi_hora?start=${start}&end=${end}`;
+    try {
+        let url;
+        if (isRolloutActive()) {
+            url = `/rollout/${selectedPoolId}`;
+        } else {
+            const dateStr = toLocalISODate(selectedDate);
+            url = `/data/${selectedPoolId}?start=${dateStr}T00:00:00&end=${dateStr}T23:59:59`;
+        }
 
         const res  = await fetch(url);
         const data = await res.json();
@@ -166,7 +278,7 @@ async function loadData() {
         const timeOptions = {
             hour:   '2-digit',
             minute: '2-digit',
-            ...(isDailyRolloutSelected() && { weekday: 'short' }),
+            ...(isRolloutActive() && { weekday: 'short' }),
         };
         const labels = data.map(d => new Date(d.time * 1000).toLocaleTimeString('cs-CZ', timeOptions));
         const values = data.map(d => d.val);
@@ -210,21 +322,6 @@ function updateStatus() {
     document.getElementById('timestamp').textContent = new Date().toLocaleTimeString('cs-CZ');
 }
 
-// --- Navigation ---
-
-document.getElementById('btn-prev').addEventListener('click', () => {
-    dayOffset--;
-    updateDateLabel();
-    loadData();
-});
-
-document.getElementById('btn-next').addEventListener('click', () => {
-    if (dayOffset >= 1) return;
-    dayOffset++;
-    updateDateLabel();
-    loadData();
-});
-
 // --- Version ---
 
 async function loadVersion() {
@@ -232,7 +329,7 @@ async function loadVersion() {
         const res  = await fetch('/version');
         const data = await res.json();
         document.getElementById('version').textContent = `v${data.version}`;
-    } catch(error) {
+    } catch (error) {
         console.error('Chyba při načítání verze:', error);
     }
 }
@@ -241,10 +338,11 @@ async function loadVersion() {
 
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || THEMES.DARK;
 applyTheme(savedTheme);
+readUrlState();
 updateDateLabel();
-loadData();
+loadPools().then(() => loadData());
 loadVersion();
 
 setInterval(() => {
-    if (dayOffset >= 0) loadData();
+    if (isRolloutActive()) loadData();
 }, UPDATE_INTERVAL);

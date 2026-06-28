@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from src import __version__ as version
 from src.collectors import ScheduleHelper
-from src.pools.registry import create_collectors, get_repository, get_scraper
+from src.pools.registry import create_collectors, get_all_scrapers, get_repository, get_scraper
 from src.storage.database import Database
 from src.storage.occupancy_repository import DEFAULT_QUERY_LIMIT
 
@@ -55,6 +55,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/version")
 def get_version():
     return {"version": version}
+
+
+@app.get("/pools")
+def get_pools():
+    return [s.config.to_dict() for s in get_all_scrapers()]
 
 
 @app.get("/data/{pool_id}")

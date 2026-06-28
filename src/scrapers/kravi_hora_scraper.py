@@ -17,10 +17,11 @@ class KraviHoraScraper(BaseScraper):
     def config(self) -> PoolConfig:
         return PoolConfig(
             id="kravi_hora",
-            name="Kraví Hora",
+            name="Kraví Hora - Vnitřní",
             interval_minutes=10,
             visit_hours_start=6,
             visit_hours_end=22,
+            occupancy_thresholds=(30, 50, 80),
         )
 
     def fetch_occupancy(self) -> Union[int, None]:
