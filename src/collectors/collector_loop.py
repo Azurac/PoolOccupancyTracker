@@ -10,6 +10,7 @@ class CollectorLoop:
         self._scraper = scraper
         self._repository = repository
         self._schedule = schedule
+        self._name = scraper.config.name
 
     async def run(self):
         while True:
@@ -19,7 +20,7 @@ class CollectorLoop:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                print(f"[ERROR] Collector failed: {e}")
+                print(f"[ERROR] Collector {self._name} failed: {e}")
 
     def _seconds_until_next_collection(self) -> float:
         cfg = self._scraper.config
@@ -31,6 +32,6 @@ class CollectorLoop:
         value = asyncio.to_thread(self._scraper.fetch_occupancy)
         if value is not None:
             self._repository.save(value)
-            print(f"[COLLECTED] {value}")
+            print(f"[COLLECTED] {self._name} has {value}")
         else:
-            print("[COLLECTED] no data")
+            print(f"[COLLECTED] {self._name} has no data")
