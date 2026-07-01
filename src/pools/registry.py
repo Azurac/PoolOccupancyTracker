@@ -1,13 +1,10 @@
 from typing import Union
 
 from src.collectors import ScheduleHelper, CollectorLoop
-from src.scrapers import BaseScraper, KraviHoraInsideScraper, KraviHoraOutsideScraper
+from src.scrapers import BaseScraper, discover_scraper_classes
 from src.storage import Database, OccupancyRepository
 
-_scrapers: list[BaseScraper] = [
-    KraviHoraInsideScraper(),
-    KraviHoraOutsideScraper(),
-]
+_scrapers: list[BaseScraper] = [scraper_cls() for scraper_cls in discover_scraper_classes()]
 _repositories: dict[str, OccupancyRepository] = {}
 
 
