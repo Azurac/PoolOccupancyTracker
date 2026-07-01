@@ -15,7 +15,7 @@ class CollectorLoop:
         while True:
             try:
                 await asyncio.sleep(self._seconds_until_next_collection())
-                self._collect()
+                await self._collect()
             except asyncio.CancelledError:
                 raise
             except Exception as e:
@@ -27,8 +27,8 @@ class CollectorLoop:
             return self._schedule.seconds_until_next_interval(cfg.interval_minutes)
         return self._schedule.seconds_until_hour(cfg.visit_hours_start)
 
-    def _collect(self):
-        value = self._scraper.fetch_occupancy()
+    async def _collect(self):
+        value = asyncio.to_thread(self._scraper.fetch_occupancy)
         if value is not None:
             self._repository.save(value)
             print(f"[COLLECTED] {value}")
