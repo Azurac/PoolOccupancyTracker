@@ -1,11 +1,12 @@
 from typing import Union
 
 from src.collectors import ScheduleHelper, CollectorLoop
-from src.scrapers import KraviHoraScraper, BaseScraper
+from src.scrapers import BaseScraper, KraviHoraInsideScraper, KraviHoraOutsideScraper
 from src.storage import Database, OccupancyRepository
 
 _scrapers: list[BaseScraper] = [
-    KraviHoraScraper()
+    KraviHoraInsideScraper(),
+    KraviHoraOutsideScraper(),
 ]
 _repositories: dict[str, OccupancyRepository] = {}
 
