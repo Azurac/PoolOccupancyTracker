@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from src.storage.database import Database
 from src.storage.occupancy_record import OccupancyRecord
@@ -30,7 +31,17 @@ class OccupancyRepository:
             ).fetchall()
         return [OccupancyRecord(time=row["time"], val=row["val"]) for row in reversed(rows)]
 
-    def find_by_range(self, start: str = None, end: str = None, limit: int = DEFAULT_QUERY_LIMIT) -> list[
+    def find_by_range_str(self, start: Optional[str] = None, end: Optional[str] = None,
+                          limit: int = DEFAULT_QUERY_LIMIT) -> list[OccupancyRecord]:
+        limit = min(limit, DEFAULT_QUERY_LIMIT)
+
+        return self.find_by_range(
+            start=int(datetime.fromisoformat(start).timestamp()) if start else 0,
+            end=int(datetime.fromisoformat(end).timestamp()) if end else 0,
+            limit=limit
+        )
+
+    def find_by_range(self, start: int = 0, end: int = 0, limit: int = DEFAULT_QUERY_LIMIT) -> list[
         OccupancyRecord]:
         limit = min(limit, DEFAULT_QUERY_LIMIT)
 
@@ -40,10 +51,10 @@ class OccupancyRepository:
 
         if start:
             conditions.append("time >= ?")
-            params.append(int(datetime.fromisoformat(start).timestamp()))
+            params.append(start)
         if end:
             conditions.append("time <= ?")
-            params.append(int(datetime.fromisoformat(end).timestamp()))
+            params.append(end)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)

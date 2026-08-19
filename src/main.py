@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import timedelta, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Query, Request
@@ -64,14 +65,13 @@ def get_pools():
 
 @app.get("/data/{pool_id}")
 def get_data(pool_id: str, start: str = Query(None), end: str = Query(None), limit: int = Query(DEFAULT_QUERY_LIMIT)):
-    records = get_repository(pool_id).find_by_range(start, end, limit)
+    records = get_repository(pool_id).find_by_range_str(start, end, limit)
     return [r.to_dict() for r in records]
 
 
 @app.get("/rollout/{pool_id}")
 def get_rollout(pool_id: str):
-    scraper = get_scraper(pool_id)
-    records = get_repository(pool_id).find_latest(scraper.config.get_rollout_limit()) if scraper else []
+    records = get_repository(pool_id).find_by_range(int((datetime.now() - timedelta(days=1)).timestamp()))
     return [r.to_dict() for r in records]
 
 
