@@ -88,7 +88,7 @@ class KraviHoraOutsideScraper(BaseScraper):
             if not strong:
                 continue
 
-            value_text = strong.get_text(strip=True)
+            value_text = strong.get_text(strip=True).split()[0]
 
             return int(value_text.strip())
 
